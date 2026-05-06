@@ -1,4 +1,6 @@
 """
+Run on CA1822_Direct_Candidates_Filtered.csv and CA1822_Cascading_Candidates_Filtered.csv
+It will generate *_Methods_Only.csv
 Example:
 python3 statistics.py --statistics --pos-file /home/ali/Statica/systems/Files-4.0.24/stereotypes/Files-4.0.24.pos.stereotypes.xml --candidates-file /home/ali/Statica/systems/Files-4.0.24/CA1822/*.csv
 python3 statistics.py --statistics --pos-file /home/ali/Statica/systems/ShareX-18.0.1/stereotypes/ShareX-18.0.1.pos.stereotypes.xml --candidates-file /home/ali/Statica/systems/ShareX-18.0.1/CA1822/*.csv

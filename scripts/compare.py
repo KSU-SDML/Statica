@@ -92,7 +92,7 @@ def evaluate_pipeline(run_files, direct_baseline_file, cascading_baseline_file, 
             key = (row['method_name'], row['line_number'], row['file_name'])
             golden_truth_additional[key] = row
 
-    # Load the broken srcML candidates to completely exclude them
+    # Load the broken srcML candidates
     broken_keys = set()
     with open(broken_baseline_file, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
@@ -101,11 +101,11 @@ def evaluate_pipeline(run_files, direct_baseline_file, cascading_baseline_file, 
             broken_keys.add(key)
                     
     if broken_keys:
-        print(f"Loaded {len(broken_keys)} broken srcML items to EXCLUDE from all metrics.")
+        print(f"Loaded {len(broken_keys)} broken srcML items to EXCLUDE from evaluation metrics.")
 
     print(f"Loaded {len(golden_truth_direct)} direct golden truth items.")
     print(f"Loaded {len(golden_truth_cascading)} cascading golden truth items.")
-    print(f"Loaded {len(golden_truth_additional)} manually verified additional golden truth items.")
+    print(f"Loaded {len(golden_truth_additional)} manually verified additional golden truth items.\n")
 
     # Tracking TP, FP, and FN for every stage
     all_runs_metrics = {
@@ -116,13 +116,13 @@ def evaluate_pipeline(run_files, direct_baseline_file, cascading_baseline_file, 
 
     perf_metrics = {'tp': [], 'fp': [], 'fn': [], 'precision': [], 'recall': [], 'f1': []}
     
-    # New dictionary to track aggregated coverage sizes
+    # Track aggregated coverage sizes
     coverage_metrics = {'cov_direct': [], 'cov_cascading': [], 'cov_additional': [], 'true_fps': []}
 
     # 2. Process all runs
     for run_file in run_files:
-        run_name = os.path.splitext(os.path.basename(run_file))[0] # Extracts "1" from "1.csv"
-        metrics = {k: 0 for k in all_runs_metrics.keys()} # Reset for this run
+        run_name = os.path.splitext(os.path.basename(run_file))[0]
+        metrics = {k: 0 for k in all_runs_metrics.keys()}
         
         covered_direct_rows, covered_cascading_rows, covered_additional_rows, leftover_rows = [], [], [], []
         rejected_direct_rows, rejected_llm_rows, rejected_cascading_rows = [], [], []
@@ -132,23 +132,24 @@ def evaluate_pipeline(run_files, direct_baseline_file, cascading_baseline_file, 
         with open(run_file, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
             y_fieldnames = reader.fieldnames
+            
+            # --- STEP 1 & 2: Front-Door Exclusion ---
+            valid_rows = []
             for row in reader:
                 key = (row['method_name'], row['line_number'], row['file_name'])
-                
-                if key in broken_keys:
-                    continue # Skips all counting, tracking, and CSV exporting
+                if key not in broken_keys:
+                    valid_rows.append(row)
+            
+            # --- STEP 3: Print Valid Input Size ---
+            input_size = len(valid_rows)
+            print(f"Run {run_name} | Total Input Size (excluding broken): {input_size}")
+
+            # --- STEP 4: Process the remaining valid logic ---
+            for row in valid_rows:
+                key = (row['method_name'], row['line_number'], row['file_name'])
 
                 is_static = row['to_static'] == 'True'
                 reasoning = row['reasoning']
-                
-                # True Positive: Statica approved it, AND it is either in the Roslyn baseline OR your verified additional list
-                is_tp = is_static and (key in golden_truth_direct or key in golden_truth_cascading or key in golden_truth_additional)
-
-                # False Negative: Statica rejected it, BUT it was in the Roslyn baseline OR your verified additional list
-                is_fn = not is_static and (key in golden_truth_direct or key in golden_truth_cascading or key in golden_truth_additional)
-
-                # False Positive: Statica approved it, BUT it is NOT in the baseline AND NOT manually verified
-                is_fp = is_static and (key not in golden_truth_direct) and (key not in golden_truth_cascading) and (key not in golden_truth_additional)
 
                 is_direct = reasoning == 'Direct Analysis'
                 is_pure_cascading = reasoning == 'Cascading Analysis'
@@ -157,34 +158,44 @@ def evaluate_pipeline(run_files, direct_baseline_file, cascading_baseline_file, 
                 is_from_llm = not (is_direct or is_pure_cascading)
                 is_llm_rejected = not (is_direct or is_pure_cascading or is_llm_no_calls or is_llm_with_calls)
 
-                # --- A. Metrics Counting ---
+                # --- Flow Counting ---
+                if is_direct:
+                    if is_static: metrics['direct_static'] += 1
+                    else: metrics['direct_non_static'] += 1
+
+                if is_from_llm:
+                    if is_llm_rejected: metrics['llm_non_static'] += 1
+                    else: metrics['llm_passed'] += 1
+                        
+                if is_pure_cascading or is_llm_with_calls or is_llm_no_calls:
+                    if is_static: metrics['casc_static'] += 1
+                    else: metrics['casc_non_static'] += 1
+
+                # --- Performance Metrics Tracking ---
+                # Positive matches checked against a compilation-dependent analyzer (Microsoft Roslyn) baseline
+                is_tp = is_static and (key in golden_truth_direct or key in golden_truth_cascading or key in golden_truth_additional)
+                is_fn = not is_static and (key in golden_truth_direct or key in golden_truth_cascading or key in golden_truth_additional)
+                is_fp = is_static and (key not in golden_truth_direct) and (key not in golden_truth_cascading) and (key not in golden_truth_additional)
+
                 if is_direct:
                     if is_static:
-                        metrics['direct_static'] += 1
                         if is_tp: metrics['direct_tp'] += 1
                         if is_fp: metrics['direct_fp'] += 1
                     else:
-                        metrics['direct_non_static'] += 1
                         if is_fn: metrics['direct_fn'] += 1
 
                 if is_from_llm:
                     if is_llm_rejected:
-                        metrics['llm_non_static'] += 1
-                        # Only rejections can be False Negatives in the LLM stage
                         if is_fn: metrics['llm_fn'] += 1
-                    else:
-                        metrics['llm_passed'] += 1 # These are not TPs yet, just "passed the LLM gate"
                         
                 if is_pure_cascading or is_llm_with_calls or is_llm_no_calls:
                     if is_static:
-                        metrics['casc_static'] += 1
                         if is_tp: metrics['casc_tp'] += 1
                         if is_fp: metrics['casc_fp'] += 1
                     else:
-                        metrics['casc_non_static'] += 1
                         if is_fn: metrics['casc_fn'] += 1
                         
-                # --- B. Detailed Data Extraction ---
+                # --- Detailed Data Extraction ---
                 if is_static:
                     if key in golden_truth_direct:
                         covered_direct_rows.append(row)
@@ -196,7 +207,7 @@ def evaluate_pipeline(run_files, direct_baseline_file, cascading_baseline_file, 
                         covered_additional_rows.append(row)
                         matched_additional_keys.add(key)
                     else:
-                        leftover_rows.append(row) # These are the true FPs now!
+                        leftover_rows.append(row)
                 else:
                     if is_direct: rejected_direct_rows.append(row)
                     elif is_llm_rejected: rejected_llm_rows.append(row)
@@ -205,7 +216,7 @@ def evaluate_pipeline(run_files, direct_baseline_file, cascading_baseline_file, 
         for k in metrics.keys():
             all_runs_metrics[k].append(metrics[k])
             
-        # --- C. Calculate Performance Metrics ---
+        # --- Calculate Performance Metrics ---
         run_tp = metrics['direct_tp'] + metrics['casc_tp']
         run_fp = metrics['direct_fp'] + metrics['casc_fp']
         run_fn = metrics['direct_fn'] + metrics['llm_fn'] + metrics['casc_fn']
@@ -221,7 +232,6 @@ def evaluate_pipeline(run_files, direct_baseline_file, cascading_baseline_file, 
         perf_metrics['recall'].append(run_recall)
         perf_metrics['f1'].append(run_f1)
             
-        # Track coverage lengths for the final average table
         coverage_metrics['cov_direct'].append(len(covered_direct_rows))
         coverage_metrics['cov_cascading'].append(len(covered_cascading_rows))
         if golden_truth_additional:
@@ -230,11 +240,9 @@ def evaluate_pipeline(run_files, direct_baseline_file, cascading_baseline_file, 
             
         # --- PREPARE MASTER TP, FP, FN LISTS ---
         master_tp_rows = covered_direct_rows + covered_cascading_rows + covered_additional_rows
-        
         master_fn_rows = [row for k, row in golden_truth_direct.items() if k not in matched_direct_keys] + \
                          [row for k, row in golden_truth_cascading.items() if k not in matched_cascading_keys] + \
                          [row for k, row in golden_truth_additional.items() if k not in matched_additional_keys]
-                         
         master_fp_rows = leftover_rows
         
         # --- EXPORT TO CSV ---
@@ -248,33 +256,16 @@ def evaluate_pipeline(run_files, direct_baseline_file, cascading_baseline_file, 
                 writer.writeheader()
                 writer.writerows(rows)
         
-        # 1. The Master Performance Files (Mapping directly to Table VII)
         write_csv("statica_TP.csv", y_fieldnames, master_tp_rows)
         write_csv("statica_FP.csv", y_fieldnames, master_fp_rows)
         write_csv("statica_FN.csv", x_fieldnames, master_fn_rows)
         
-        # 2. The Granular Pipeline Files (Optional, but good for debugging)
         if golden_truth_additional:
             write_csv("statica_coverage_additional_verified.csv", y_fieldnames, covered_additional_rows)
             
         write_csv("statica_rejected_direct.csv", y_fieldnames, rejected_direct_rows)
         write_csv("statica_rejected_llm.csv", y_fieldnames, rejected_llm_rows)
         write_csv("statica_rejected_cascading.csv", y_fieldnames, rejected_cascading_rows)
-        
-        print(f"\n--- Execution Summary (Run {run_name}) ---")
-        print(f"Statica Coverage (Direct):    {len(covered_direct_rows)}")
-        print(f"Statica Coverage (Cascading): {len(covered_cascading_rows)}")
-        if golden_truth_additional:
-            print(f"Statica Coverage (Additional):{len(covered_additional_rows)}")
-        print(f"Statica Additional (True FPs):{len(leftover_rows)}")
-        print(f"Baseline Missed (Direct):     {len([row for k, row in golden_truth_direct.items() if k not in matched_direct_keys])}")
-        print(f"Baseline Missed (Cascading):  {len([row for k, row in golden_truth_cascading.items() if k not in matched_cascading_keys])}")
-        if golden_truth_additional:
-            print(f"Baseline Missed (Additional): {len([row for k, row in golden_truth_additional.items() if k not in matched_additional_keys])}")
-        print(f"Rejections (Direct):          {len(rejected_direct_rows)}")
-        print(f"Rejections (LLM):             {len(rejected_llm_rows)}")
-        print(f"Rejections (Cascading):       {len(rejected_cascading_rows)}")
-        print(f"--> Saved CSVs to: {run_export_dir}")
 
     # 3. Format Output
     final_stats = {}
@@ -345,9 +336,8 @@ def evaluate_pipeline(run_files, direct_baseline_file, cascading_baseline_file, 
     print(f"  F1-Score:             {perf_stats['f1']}")
     print("="*100)
 
-
 if __name__ == "__main__":
-    SYSTEM_NAME = "ShareX-18.0.1"
+    SYSTEM_NAME = "Files-4.0.24"
     BASE_DIR = f"/home/ali/Statica/systems/{SYSTEM_NAME}"
     
     RUN_FILES = [
@@ -358,8 +348,9 @@ if __name__ == "__main__":
         f"{BASE_DIR}/results/5.csv",
     ]
     
-    DIRECT_BASELINE = f"{BASE_DIR}/CA1822/CA1822_Direct_Candidates_Methods_Only_Covered.csv"
-    CASCADING_BASELINE = f"{BASE_DIR}/CA1822/CA1822_Cascading_Candidates_Methods_Only.csv"
+    # Use the *_Only_Covered.csv
+    DIRECT_BASELINE = f"{BASE_DIR}/CA1822/CA1822_Direct_Candidates_Filtered_Methods_Only_Covered.csv"
+    CASCADING_BASELINE = f"{BASE_DIR}/CA1822/CA1822_Cascading_Candidates_Filtered_Methods_Only.csv"
     ADDITIONAL_BASELINE = f"{BASE_DIR}/results/additional_candidates.csv"
     BROKEN_BASELINE = f"{BASE_DIR}/results/candidates_broken.csv"
 
