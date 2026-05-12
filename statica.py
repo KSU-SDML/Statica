@@ -1,27 +1,30 @@
-# C#:
-#  Inheritance is always public.
-#  Support single inheritance from other classes and multiple inheritance from interfaces.
-#  Interfaces cannot inherit from classes or structs.
+# C# Inheritance Rules:
+#
+#  Inheritance is always public and this cannot be changed.
+#  Interfaces cannot inherit from classes or structs, but can inherit from other interfaces.
 #  Structs cannot inherit from other structs or classes, but can inherit from interfaces.
-
+#  Classes can inherit from ONE base class and MULTIPLE interfaces (Classes CANNOT inherit from structs).
+#
 #  Methods in an interface that have default bodies are implicitly virtual even if 'virtual' is not specified.
-#   The first class inheriting these methods does not need to override them since they have default bodies.
-#   If overridden in the first inheriting class, then 'virtual' does not need to be used. However, if not used, then the later subclasses cannot continue overriding these methods unless 'virtual' is specified.
-#   'override' cannot also be specified for these methods in the first inheriting class. However, later subclasses must use the 'override' if they are declared as 'virtual' in the first deriving class and later subclasses can simply keep using 'override'.
-#  Methods in interfaces that do not have default bodies (declarations only) are implicitly abstract even if the 'abstract' is not specified.
-#   The first class inheriting these methods must override them since they do not have default bodies.
-#   If overridden in the first inheriting class, then 'virtual' does not need to be used. However, if not used, then the later subclasses cannot continue overriding these methods unless 'virtual' is specified.
-#   'override' cannot also be specified for these methods in the first inheriting class. However, later subclasses must use the 'override' if they are declared as 'virtual' in the first deriving class and later subclasses can simply keep using 'override'.
-#  Therefore, classes that inherit from interfaces have two options:
-#    Either they override the methods, which means that we cannot make them static or they do not override the methods from the interface as long as these methods have a default implementation in the interface.
-#    However, this default implementation can be static, and if it is, then it cannot be overridden.
-#  So, the best way to deal with this is to ignore these methods in the first inheriting class and only consider methods with the default implementation in the interface itself.
+#   The first class/struct implementing these methods does not need to provide a body since they have default bodies.
+#   If implemented in the first class/struct, 'virtual' does not need to be used. However, if not used, later subclasses cannot override these methods.
+#   The 'override' keyword CANNOT be used when first implementing these methods as C# consider it implementing (despite having a default body) rather than overriding.
 #
-# Other cases where a class/struct is inheriting from another class/struct, then the keywords 'virtual' and 'abstract' must be specified in the base class/struct.
-#  and the keyword 'override' must be specified in the child class/struct. Therefore, all of these 3 cases cannot be static and can be ignored safely.
+#  Methods in interfaces that do not have default bodies (declarations only) are implicitly abstract even if 'abstract' is not specified.
+#   The first class/struct inheriting these interfaces MUST implement them.
+#   When implementing them, the 'override' keyword CANNOT be used. 
+#   If the implementing class wants to allow its subclasses to override the method, it must mark it as 'virtual'. 
 #
-#  Methods that are have static and properties are ignored from analysis.
-# 
+#  Therefore, classes/structs that inherit from interfaces have two options:
+#   1. They implement the methods (no 'override' keyword used), meaning they are tied to the interface and cannot be static.
+#   2. They rely on the default implementation provided by the interface (which is always an instance method, never static).
+#   (Note: While interfaces can contain explicit 'static' methods, those are not inherited by the implementing class/struct).
+#
+# STATICA:
+# Other cases where a class is inheriting from another base class, the keywords 'virtual' or 'abstract' must be specified in the base class, and the keyword 'override' MUST be specified in the child class. 
+# Because 'override' is strictly required for base-class inheritance, these methods can be caught deterministically and ignored safely without an LLM.
+# Interface implementations lack the 'override' keyword,  which is exactly why the LLM is required for them.
+#
 
 import argparse
 import os

@@ -31,10 +31,10 @@ TOKEN_SAFETY_MARGIN = 0.5
 SYSTEM_PROMPT = """
 ### CONTEXT
 You are a C# expert.
-Your ONLY task is to determine if a given method is overriding a method in a base class/struct/interface.
+Determine if the given class is implementing a method in an external interface
 
 ### INPUT
-* type_name: The name of the type.
+* type_name: The name of the class/struct.
 * type_file_name: The file name where the type is defined.
 * type_parent_names: A list of base type names that the current type inherits from.
 * methods: A list of methods in this type to evaluate (see below).
@@ -48,7 +48,7 @@ METHOD STRUCTURE ('methods'):
 
 ### TASK
 Follow these STRICT rules to output `requires_instance_context`:
-1. `requires_instance_context: TRUE`: If the method is overriding a method in one of its `type_parent_names`.
-Example: `Run` for `IBackgroundTask` --> Requires instance context because it is an override of a method in a common Microsoft interface.
+1. `requires_instance_context: TRUE`: If the method is implementing a method in one of its `type_parent_names`.
+Example: `Run` for `IBackgroundTask` --> Requires instance context because it is an implementation of a method in a common Microsoft interface.
 2. `requires_instance_context: FALSE`: Otherwise
 """
