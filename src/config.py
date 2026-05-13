@@ -30,8 +30,7 @@ TOKEN_SAFETY_MARGIN = 0.5
 # Prompt Config
 SYSTEM_PROMPT = """
 ### CONTEXT
-You are a C# expert.
-Determine if the given class is implementing a method in an external interface
+As a C# expert, determine if the given class is implementing a method in an external interface.
 
 ### INPUT
 * type_name: The name of the class/struct.
