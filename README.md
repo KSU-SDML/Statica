@@ -6,10 +6,8 @@ Statica is a compilation-independent tool designed to detect static methods cand
 
 Before running Statica, you must install srcML and Stereocode:
 
-1. **srcML**: An infrastructure for the exploration, analysis, and manipulation of source code. 
-   * [srcML GitHub Repository](https://github.com/srcML/srcML)
-2. **Stereocode**: A static analysis tool that detects and annotates class and function stereotypes using srcML input.
-   * [Stereocode GitHub Repository](https://github.com/srcML/stereocode)
+1. **[srcML](https://github.com/srcML/srcML)**: An infrastructure for the exploration, analysis, and manipulation of source code. 
+2. **[Stereocode](https://github.com/srcML/stereocode)**: A static analysis tool that detects and annotates class and function stereotypes using srcML input.
 
 You will also need **Python 3.9+** and a valid **Google Gemini API Key**.
 
@@ -17,15 +15,14 @@ You will also need **Python 3.9+** and a valid **Google Gemini API Key**.
 
 1. Clone the Statica repository and navigate to the project root:
    ```bash
-   git clone [https://github.com/KSU-SDML/Statica.git](https://github.com/KSU-SDML/Statica.git)
+   git clone https://github.com/KSU-SDML/Statica.git
    cd Statica
    ```
 
 2. Install the required Python packages:
    ```bash
    pip install langgraph langchain-core langchain-google-genai google-genai pydantic
-   
-```
+   ```
 
 ## Setup
 
