@@ -4,7 +4,7 @@ Statica is a compilation-independent tool designed to detect static methods cand
 
 ## Prerequisites
 
-Before running Statica, you must install srcML and Stereocode
+Before running Statica, you must install srcML and Stereocode:
 
 1. **srcML**: An infrastructure for the exploration, analysis, and manipulation of source code. 
    * [srcML GitHub Repository](https://github.com/srcML/srcML)
@@ -24,7 +24,8 @@ You will also need **Python 3.9+** and a valid **Google Gemini API Key**.
 2. Install the required Python packages:
    ```bash
    pip install langgraph langchain-core langchain-google-genai google-genai pydantic
-   ```
+   
+```
 
 ## Setup
 
@@ -39,6 +40,7 @@ export GOOGLE_API_KEY="your_api_key_here"
 ```cmd
 set GOOGLE_API_KEY="your_api_key_here"
 ```
+
 *(If the environment variable is not found during execution, Statica will securely prompt you to enter it in the terminal).*
 
 ## Usage
@@ -46,6 +48,7 @@ set GOOGLE_API_KEY="your_api_key_here"
 Running Statica is a two-step process. First, you must generate the required stereotype metadata, and then pass that metadata into the Statica pipeline.
 
 ### Step 1: Generate Metadata
+
 Use srcML and Stereocode to process your target C# system. This will generate the `*.metadata.csv` file that Statica requires.
 
 ```bash
@@ -57,13 +60,15 @@ stereocode system.xml -b -d -i -t
 ```
 
 ### Step 2: Run Statica
+
 Pass the generated CSV file into `statica.py`.
 
 ```bash
 python statica.py system.metadata.csv
 ```
 
-#### Optional Arguments
+### Optional Arguments
+
 * `--output_file_path`: Specify a custom name and path for the final Statica results. By default, it will save as `output.csv` in the root directory.
 
 **Example:**
@@ -75,8 +80,8 @@ python statica.py Files-4.0.24.metadata.csv --output_file_path my_results.csv
 
 Statica will output a CSV file detailing the analysis of all non-degenerate and degenerate instance methods. The CSV contains the following columns:
 
-* `method_name`: The name of the evaluated method.
-* `line_number`: The line number where the method is defined.
-* `file_name`: The source file containing the method.
-* `to_static`: A boolean (`True`/`False`) indicating if the method is safely eligible for static conversion.
-* `reasoning`: The pipeline stage or condition that led to the method's approval or rejection (e.g., *Direct Analysis*, *Cascading Analysis*, *Cascading + LLM*).
+* **method_name**: The name of the evaluated method.
+* **line_number**: The line number where the method is defined.
+* **file_name**: The source file containing the method.
+* **to_static**: A boolean (`True`/`False`) indicating if the method is safely eligible for static conversion.
+* **reasoning**: The pipeline stage or condition that led to the method's approval or rejection (e.g., Direct Analysis, Cascading Analysis, Cascading + LLM).
