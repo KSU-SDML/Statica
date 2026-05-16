@@ -34,7 +34,7 @@ def direct_candidates_analysis(state: AgentState) -> AgentState:
                 continue
             if type_name == "N/A" or method_name == "N/A":
                 continue
-            if method_name in {"get", "set"}:
+            if method_name in {"get", "set"}: # Do not use lower() as regular methods can be called as Get() or Set()
                 continue
             if any(s in IGNORED_NON_DEGENERATE_STEREOTYPES for s in method_stereotypes):
                 continue
