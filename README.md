@@ -9,7 +9,7 @@ Before running Statica, you must install srcML and Stereocode:
 1. **[srcML](https://github.com/srcML/srcML)**: An infrastructure for the exploration, analysis, and manipulation of source code. 
 2. **[Stereocode](https://github.com/srcML/stereocode)**: A static analysis tool that detects and annotates class and function stereotypes using srcML input.
 
-You will also need **Python 3.9+** and a valid **Google Gemini API Key**.
+You will also need **Python 3.12+** and a valid **Google Gemini API Key**.
 
 ## Installation
 
